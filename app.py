@@ -34,28 +34,32 @@ def bereken_vorm_multiplier(vorm_string):
 
 @st.cache_data
 def laad_data():
-    csv_path = Path(__file__).parent / "wk_data.csv"
-    excel_path = Path(__file__).parent / "wk_data.xlsx"
+    # Lijst alle bestanden in de map
+    files = os.listdir('.')
     
+    # Zoek naar een bestand dat begint met 'wk_data'
+    data_file = next((f for f in files if f.startswith("wk_data")), None)
+    
+    if data_file is None:
+        st.error(f"Geen bestand gevonden dat begint met 'wk_data'. Gevonden bestanden: {files}")
+        return pd.DataFrame()
+    
+    # Laad op basis van extensie
     try:
-        # Ondersteuning voor zowel Excel als CSV
-        if csv_path.exists():
-            df = pd.read_csv(csv_path)
-        elif excel_path.exists():
-            df = pd.read_excel(excel_path)
+        if data_file.endswith('.csv'):
+            df = pd.read_csv(data_file)
         else:
-            st.error("Het bestand `wk_data.xlsx` of `wk_data.csv` kon niet worden gevonden. Plaats het in dezelfde map als `app.py`.")
+            df = pd.read_excel(data_file)
+            
+        # Check kolommen
+        required = {"Land", "Poule", "Elo", "Marktwaarde", "Odd", "FC26", "Formatie", "Vorm", "xG last 10", "xGA last 10"}
+        if not required.issubset(df.columns):
+            st.error(f"Kolommen missen! Gevonden kolommen: {list(df.columns)}")
             return pd.DataFrame()
+        return df
     except Exception as e:
-        st.error(f"Fout bij het inladen van het bestand: {e}")
+        st.error(f"Fout bij openen van {data_file}: {e}")
         return pd.DataFrame()
-    
-    required_cols = {"Land", "Poule", "Elo", "Marktwaarde", "Odd", "FC26", "Formatie", "Vorm", "xG last 10", "xGA last 10"}
-    missing_cols = required_cols - set(df.columns)
-    if missing_cols:
-        st.error(f"Ontbrekende kolommen in je databestand: {', '.join(sorted(missing_cols))}")
-        return pd.DataFrame()
-    return df
 
 df_teams = laad_data()
 if df_teams.empty:
